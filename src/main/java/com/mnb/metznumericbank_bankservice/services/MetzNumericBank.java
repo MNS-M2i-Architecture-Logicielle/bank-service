@@ -1,7 +1,6 @@
 package com.mnb.metznumericbank_bankservice.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mnb.metznumericbank_bankservice.dto.response.AccountResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -123,17 +122,13 @@ public class MetzNumericBank implements Bank {
     public Mono<Double> getAccountAmount(Long accountId) {
         return webClientBuilder.build()
                 .get()
-                .uri("http://localhost:8080/api/account/" + accountId)
+                .uri("http://localhost:8080/api/persistence/account/{id}" + accountId)
                 .retrieve()
-                .bodyToMono(String.class)
-                .handle((json, sink) -> {
-                    try {
-                        ObjectMapper mapper = new ObjectMapper();
-                        JsonNode root = mapper.readTree(json);
-                        sink.next(root.get("balance").asDouble());
-                    } catch (Exception e) {
-                        sink.error(new RuntimeException("Error parsing JSON response", e));
-                    }
+                .bodyToMono(AccountResponse.class)
+                .map(AccountResponse::balance)
+                .onErrorResume(e -> {
+                    System.err.println("Erreur de récupération du compte: " + e.getMessage());
+                    return Mono.just(0.0);
                 });
     }
 }
